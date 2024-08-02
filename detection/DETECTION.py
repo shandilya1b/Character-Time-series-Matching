@@ -90,6 +90,7 @@ class Detection:
             height, width = img.shape[:2]
             img = cv2.warpAffine(img, trans_m, (width, height))
             return img
+
     def load_model(self,path, train = False):
         # print(self.device)
         model = attempt_load(path, map_location=self.device)  # load FP32 model
@@ -99,6 +100,7 @@ class Detection:
         else:
             model.eval()
         return model, names
+
     def xyxytoxywh(self, x):
         # Convert nx4 boxes from [x1, y1, x2, y2] to [x, y, w, h] where xy1=top-left, xy2=bottom-right
         y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
