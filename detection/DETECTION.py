@@ -3,7 +3,7 @@ import torch
 import os
 import sys
 import argparse
-sys.path.append(os.path.abspath('../yolov5'))
+sys.path.append(os.path.abspath('yolov5'))
 from utils.general import non_max_suppression, scale_coords
 # from ai_core.object_detection.yolov5_custom.od.data.datasets import letterbox
 from typing import List
@@ -115,6 +115,7 @@ class Detection:
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='object.pt', help='model path or triton URL')
+    parser.add_argument('--out-dir', default='out', help='path to output folder')
     parser.add_argument('--source', type=str, default='Vietnamese_imgs', help='file/dir')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[1280], help='inference size h,w')
     parser.add_argument('--conf-thres', type=float, default=0.1, help='confidence threshold')
@@ -134,17 +135,26 @@ if __name__ == '__main__':
     
     char_model=Detection(size=opt.imgsz,weights_path=opt.weights,device=opt.device,iou_thres=opt.iou_thres,conf_thres=opt.conf_thres)
     path=opt.source
+    dest_path=opt.out_dir
 
     img_names=os.listdir(path)
+    detect_objects = []
+    if not os.path.exists(os.path.join(dest_path)):
+        os.makedirs(os.path.join(dest_path))
+    os.mkdir(os.path.join(dest_path, 'plates'))
 
     for img_name in img_names:
         img=cv2.imread(os.path.join(path,img_name))
         results, resized_img=char_model.detect(img.copy())
+        copy_img = resized_img.copy()
         for name,conf,box in results:
             resized_img=cv2.putText(resized_img, "{}".format(name), (int(box[0]), int(box[1])-3),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                                     (255, 0, 255), 2)
             resized_img = cv2.rectangle(resized_img, (int(box[0]),int(box[1])), (int(box[2]),int(box[3])), (0,0,255), 1)
-        if not os.path.exists(os.path.join('out')):
-            os.makedirs(os.path.join('out'))
-        cv2.imwrite(os.path.join('out',img_name),resized_img)
+            if 'license plate' in name:
+                detect_objects.append(copy_img[int(box[1]): int(box[3]), int(box[0]): int(box[2])].copy())
+
+        cv2.imwrite(os.path.join(dest_path, img_name),resized_img)
+    for i, obj in enumerate(detect_objects):
+        cv2.imwrite(os.path.join(dest_path, 'plates', str(i) + '.png'), obj)
